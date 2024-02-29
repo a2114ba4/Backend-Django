@@ -1,6 +1,6 @@
-Создадим модели для описания сущностей продукта, пользователя, урока и группы в файле models.py:
+#Создадим модели для описания сущностей продукта, пользователя, урока и группы в файле models.py:
 
-python
+#python
 from django.db import models
 
 class User(models.Model):
@@ -26,9 +26,9 @@ class Group(models.Model):
 
 
 
-Для реализации API нам понадобится создать сериализаторы для каждой модели в файле serializers.py:
+#Для реализации API нам понадобится создать сериализаторы для каждой модели в файле serializers.py:
 
-python
+#python
 from rest_framework import serializers
 from .models import User, Product, Lesson, Group
 
@@ -53,9 +53,9 @@ class GroupSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-Затем, создадим представления для каждой модели в файле views.py, которые будут возвращать данные в формате JSON:
+#Затем, создадим представления для каждой модели в файле views.py, которые будут возвращать данные в формате JSON:
 
-python
+#python
 from rest_framework import viewsets
 from .models import User, Product, Lesson, Group
 from .serializers import UserSerializer, ProductSerializer, LessonSerializer, GroupSerializer
@@ -77,9 +77,9 @@ class GroupViewSet(viewsets.ModelViewSet):
     serializer_class = GroupSerializer
 
 
-Затем, добавим пути в файле urls.py, чтобы связать представления с URL-адресами:
+#Затем, добавим пути в файле urls.py, чтобы связать представления с URL-адресами:
 
-python
+#python
 from django.urls import path, include
 from rest_framework import routers
 from .views import UserViewSet, ProductViewSet, LessonViewSet, GroupViewSet
@@ -97,9 +97,9 @@ urlpatterns = [
 
 
 
-Для реализации распределения участников в группы, нам потребуется создать функцию, которая будет вызываться при получении доступа к продукту. В этой функции мы будем проверять, начался ли продукт, и если да, то будем распределять участников по группам, чтобы в каждой группе количество участников не отличалось больше, чем на 1.
+#Для реализации распределения участников в группы, нам потребуется создать функцию, которая будет вызываться при получении доступа к продукту. В этой функции мы будем проверять, начался ли продукт, и если да, то будем распределять участников по группам, чтобы в каждой группе количество участников не отличалось больше, чем на 1.
 
-python
+#python
 from .models import Product, Group
 
 def distribute_users(product):
