@@ -1,0 +1,129 @@
+Создадим модели для описания сущностей продукта, пользователя, урока и группы в файле models.py:
+
+python
+from django.db import models
+
+class User(models.Model):
+    name = models.CharField(max_length=100)
+
+class Product(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='products')
+    name = models.CharField(max_length=100)
+    start_date = models.DateTimeField()
+    cost = models.DecimalField(max_digits=6, decimal_places=2)
+
+class Lesson(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='lessons')
+    name = models.CharField(max_length=100)
+    video_link = models.URLField()
+
+class Group(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='groups')
+    students = models.ManyToManyField(User, related_name='groups')
+    name = models.CharField(max_length=100)
+    min_students = models.PositiveIntegerField()
+    max_students = models.PositiveIntegerField()
+
+
+
+Для реализации API нам понадобится создать сериализаторы для каждой модели в файле serializers.py:
+
+python
+from rest_framework import serializers
+from .models import User, Product, Lesson, Group
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = '__all__'
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+class LessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = '__all__'
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = '__all__'
+
+
+Затем, создадим представления для каждой модели в файле views.py, которые будут возвращать данные в формате JSON:
+
+python
+from rest_framework import viewsets
+from .models import User, Product, Lesson, Group
+from .serializers import UserSerializer, ProductSerializer, LessonSerializer, GroupSerializer
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+class LessonViewSet(viewsets.ModelViewSet):
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
+
+class GroupViewSet(viewsets.ModelViewSet):
+    queryset = Group.objects.all()
+    serializer_class = GroupSerializer
+
+
+Затем, добавим пути в файле urls.py, чтобы связать представления с URL-адресами:
+
+python
+from django.urls import path, include
+from rest_framework import routers
+from .views import UserViewSet, ProductViewSet, LessonViewSet, GroupViewSet
+
+router = routers.DefaultRouter()
+router.register('users', UserViewSet)
+router.register('products', ProductViewSet)
+router.register('lessons', LessonViewSet)
+router.register('groups', GroupViewSet)
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
+
+
+
+
+Для реализации распределения участников в группы, нам потребуется создать функцию, которая будет вызываться при получении доступа к продукту. В этой функции мы будем проверять, начался ли продукт, и если да, то будем распределять участников по группам, чтобы в каждой группе количество участников не отличалось больше, чем на 1.
+
+python
+from .models import Product, Group
+
+def distribute_users(product):
+    groups = product.groups.all()
+    num_groups = len(groups)
+    max_students_per_group = max(group.max_students for group in groups)
+
+    for group in groups:
+        if group.students.count() >= group.max_students:
+            continue
+
+        if group.students.count() <= group.min_students:
+            group.students.add(user)
+            return group
+
+        # Find group with minimal number of students
+        min_students_group = min(groups, key=lambda group: group.students.count())
+
+        # Move user from group with maximum number of students
+        max_students_group = max(groups, key=lambda group: group.students.count())
+        user = group.students.last()
+        group.students.remove(user)
+        min_students_group.students.add(user)
+        return min_students_group
+
+    # If all groups are filled to the maximum capacity
+    return None
